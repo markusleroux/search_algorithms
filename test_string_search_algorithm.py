@@ -1,13 +1,18 @@
 import unittest
-from search_algorithms import naiveSearch, KMPSearch
+from string_search_algorithms import naiveSearch, KMPSearch
 
 def makeTest(function):
 
     class Test_Search(unittest.TestCase):
 
-        def test_empty(self):
+        def test_noMatch(self):
             pat = "abc"
             txt = "defghijk"
+            self.assertEqual(function(pat, txt), [])
+
+        def test_empty(self):
+            pat = "abc"
+            txt = ""
             self.assertEqual(function(pat, txt), [])
 
         def test_last(self):

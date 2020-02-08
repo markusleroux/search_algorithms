@@ -33,8 +33,25 @@ def naiveSearch(pat, txt):
 
 
 # The KMP algorithm attempts to reduce the number of elements which are compared more than once
-# Rather than matching the whole of the pattern at the next index, it only matches those parts of the pattern
-# which aren't guarunteed to match. See https://www.geeksforgeeks.org/kmp-algorithm-for-pattern-searching/
+# Rather than matching the whole of the pattern at the next index, it ignores those parts of the pattern
+# which are guarunteed to match. More precisely, suppose elements 0,...,j-1 in the pattern match with the text,
+# while element j does not match with element i + j in the text. In the naive algorithm, we jump back to
+# pat[0] and txt[i + 1]. Now, if j > 3, the statement pat[:3] == txt[i+1:i+4] is precisely the statement that 
+# pat[:3] == pat[1:4], because we already know from the previous iteration that pat[1:4] == txt[i+1:i+4]. Thus,
+# the next reasonable comparison is pat[3] with txt[i + 4]. This is the key to the KMP algorithm: that
+# certain comparisons can be skipped based purely on j and the pattern.
+
+# To further explore which data is required to compute the next comparison, consider again the situation immediately
+# after txt[i + j] fails to match pat[j]. For the same reason as above, any k = 1,...,j-1 with pat[:j - k] == txt[i + k:i + j]
+# must have pat[k:j] == pat[:j - k]. That is, there must be a suffix pat[:j] which is also a prefix of pat[:j]. If there is such
+# prefix/suffix, the next reasonable point to check is txt[i + j] with pat[j - k] (that is, we need to know k, the length of
+# the prefix/suffix). Of course, it may occur that there are multiple such prefix/suffix pairs for a given j; in this
+# case, we seek the length of the longest one, as this is the prefix/suffix pair which (implicitely) places pat[0]
+# against the earliest element in txt.
+
+# Such suffix which are also prefix are called lps - longest proper prefix suffix (proper because at length j we only consider prefix
+# of length less than j). Since the length of the lps can be pre-computed, the KMP algorithm offers significant speedup over the
+# naive.
 
 def KMPSearch(pat, txt):
     M = len(pat)
@@ -63,7 +80,6 @@ def KMPSearch(pat, txt):
             result.append(i - M)
 
             # Move j to the end of the longest prefix which is also a suffix
-            # We have already matched this as a suffix, so we needn't match it as a prefix
             j = lps[M - 1]
         
         elif i < N and txt[i] != pat[j]:
@@ -92,9 +108,8 @@ def computeLPSArray(pat, lps):
 
     while (i < M):
         # We assume that pat[i - k] == pat[j - k] for k = 1...j
-        if pat[i] == pat[j]:
-            # If the pattern at location i matches the pattern at location j
-            # then pat[i - k] == pat[j - k] for k = 0...j
+
+        if pat[i] == pat[j]: # then pat[i - k] == pat[j - k] for k = 0...j
             j += 1
             lps[i] = j
 
@@ -103,16 +118,12 @@ def computeLPSArray(pat, lps):
         else:
             if j != 0:
                 # Since we know that pat[i] != pat[j], we use the assumption that pat[i - k] == pat[j - k] for k = 1...j
-                # to skip checking cases we know will already match. Note that this maintains the loop invariant
+                # to skip checking cases we know will already match. Note that this maintains the loop invariant.
                 # We move the prefix index to the longest proper prefix of pat[:j-1] which is also a suffix
                 # In the next iteration we check if this prefix can be extended
                 j = lps[j - 1]
 
             else:
-                # We have tried all possible prefixes up down to the one element prefix
-                # None match, so we set lps[i] = 0 and increment
+                # Nothing matches, so we set lps[i] = 0 and increment
                 lps[i] = 0
                 i += 1
-
-
-
